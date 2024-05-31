@@ -46,7 +46,7 @@ const Signup = () => {
       setErrors(validationErrors);
     } else {
       alert('Welcome! You have signed up successfully.');
-      navigate('/posts'); // Redirect to post list
+      navigate('/posts');
     }
   };
 
