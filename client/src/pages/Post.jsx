@@ -13,7 +13,15 @@ const Posts = () => {
 
   const fetchPosts = async () => {
     try {
-      const response = await axios.get(`http://localhost:8080/api/posts?page=${page}&limit=10`);
+      const token = localStorage.getItem('token');
+
+      const response = await axios.get(`http://localhost:8080/api/posts?page=${page}&limit=5`
+        ,{
+          headers: {
+            Authorization: token,
+          },
+        }
+      );
       setPosts((prevPosts) => [...prevPosts, ...response.data.posts]);
       if (response.data.posts.length === 0) {
         setHasMore(false);
@@ -39,15 +47,18 @@ const Posts = () => {
             <b>Yay! You have seen it all</b>
           </p>
         }
+        className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {posts.map((post) => (
-            <div key={post.id} className="bg-white p-4 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-2">{post.title}</h2>
+        {posts.map((post) => (
+          <div key={post.id} className="bg-white cursor-pointer rounded-lg shadow-md overflow-hidden transition duration-300 ease-in-out transform hover:scale-105">
+            <div className="bg-purple-700 px-4 py-2">
+              <h2 className="text-xl text-white font-semibold mb-2">{post.title}</h2>
+            </div>
+            <div className="px-4 py-2">
               <p className="text-gray-700">{post.content}</p>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </InfiniteScroll>
     </div>
   );
