@@ -106,5 +106,56 @@ router.post('/signup', upload, async (req, res) => {
     }
 });
 
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const transporter = nodemailer.createTransport({
+        });
+        const mailOptions = {
+            from: 'rishabhgupta4523@gmail.com',
+            to: email,
+            subject: 'Password Reset',
+            text: `
+            Click this link to reset your password: http://localhost:5173/reset-password/${token}!
+            If you didn't request a password reset, ignore this email! It will expire in 1 hour.
+            `,
+        };
+        transporter.sendMail(mailOptions, (error) => {
+            if (error) {
+                return res.status(500).json({ message: 'Failed to send password reset email' });
+            }
+            return res.status(200).json({ message: 'Password reset email sent' });
+        });
+    } catch (error) {
+        console.error('Error sending password reset email:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.post('/reset-password', async (req, res) => {
+    const { email, password, token } = req.body;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded.email !== email) {
+            return res.status(400).json({ message: 'Invalid token' });
+        }
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        user.password = password;
+        await user.save();
+        res.status(200).json({ message: 'Password reset successful' });
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
 
 export default router
