@@ -1,5 +1,6 @@
 import express, { json } from 'express'
 import dotenv from 'dotenv'
+import cors from 'cors'
 import connectDb from './config/db.js'
 import authRoutes from './routes/authRoutes.js'
 import postRoutes from './routes/postRoutes.js'
@@ -10,6 +11,7 @@ connectDb()
 const app = express()
 
 app.use(json())
+app.use(cors())
 
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);

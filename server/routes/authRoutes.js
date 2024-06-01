@@ -17,7 +17,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 20000000 }, 
+    limits: { fileSize: 20000000 },
     fileFilter: (req, file, cb) => {
         checkFileType(file, cb);
     }
@@ -37,109 +37,74 @@ const checkFileType = (file, cb) => {
 
 router.post('/signup', upload, async (req, res) => {
     try {
-        const { email, password, name } = req.body
-        const profilePicture = req.file.path;
+        const { email, password, name } = req.body;
+        let profilePictureURL;
 
-        if(profilePicture){
-            if (!email || !password) {
-                return res.status(400).json({
-                    error: 'Please fill all the required fields',
+        if (!email || !password) {
+            return res.status(400).json({
+                message: 'Please fill all the required fields',
+                success: false
+            });
+        }
+
+        const userExists = await User.findOne({ email });
+
+        if (userExists) {
+            return res.status(400).json({
+                message: 'User already exists with this email',
+                success: false
+            });
+        }
+
+        if (req.file) {
+            try {
+                const { path } = req.file;
+                const uploadedImage = await cloudinary.uploader.upload(path, {
+                    folder: 'users/pp'
+                });
+                profilePictureURL = uploadedImage.secure_url;
+            } catch (error) {
+                return res.status(500).json({
+                    message: 'Error uploading profile picture',
                     success: false
-                })
+                });
             }
-    
-            const userExists = await User.findOne({ email })
-    
-            if (userExists) {
-                return res.status(400).json({
-                    error: 'User already exists with this email',
-                    success: false
-                })
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const user = new User({
+            email,
+            password: hashedPassword,
+            name,
+            profilePictureURL
+        });
+
+        const newUser = await user.save();
+
+        const payload = {
+            user: {
+                id: newUser._id
             }
-    
-            const profilePictureURL = await cloudinary.v2.uploader.upload(profilePicture, {
-                folder: 'users/pp'
-            })
-    
-            const salt = await bcrypt.genSalt(10)
-            const hashedPassword = await bcrypt.hash(password, salt)
-    
-    
-            const user = User({
-                email,
-                password: hashedPassword,
-                name,
-                profilePictureURL: profilePictureURL.secure_url
-            })
-    
-            const newUser = await user.save();
-    
-            const payload = {
-                user: {
-                    id: newUser._id
-                }
-            }
-    
-            const token = jwt.sign(payload, process.env.JWT_SECRET, {
-                expiresIn: '7d'
-            })
-    
-            res.status(201).json({
-                data: user,
-                success: true,
-                token
-            })
-        } else {
-            if(!email || !password){
-                return res.status(400).json({
-                    message: 'Please fill all the required fields',
-                    success: false
-                })
-            }
+        };
 
-            const userExists = await User.findOne({ email })
+        const token = jwt.sign(payload, process.env.JWT_SECRET, {
+            expiresIn: '7d'
+        });
 
-            if(userExists){
-                return res.status(400).json({
-                    message: 'User already exists with this email',
-                    success: false
-                })
-            }
-
-            const salt = await bcrypt.genSalt(10)
-            const hashedPassword = await bcrypt.hash(password, salt)
-
-            const user = User({
-                email,
-                password: hashedPassword,
-                name
-            })
-
-            const newUser = await user.save()
-
-            const payload = {
-                user: {
-                    id: newUser._id
-                }
-            }
-
-            const token = jwt.sign(payload, process.env.JWT_SECRET, {
-                expiresIn: '7d'
-            })
-
-            res.status(201).json({
-                data: user,
-                success: true,
-                token
-            })
-        }        
+        res.status(201).json({
+            data: newUser,
+            success: true,
+            token
+        });
     } catch (error) {
         res.status(500).json({
             message: error.message,
             success: false
-        })
+        });
     }
-})
+});
 
 
 export default router

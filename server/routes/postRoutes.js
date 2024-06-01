@@ -4,10 +4,10 @@ import { isLoggedin } from '../middlewares/authMiddleware.js';
 
 const router = express.Router()
 
-router.get('/posts', isLoggedin, async (req, res) => {
+router.get('/', isLoggedin, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = parseInt(req.query.limit) || 5;
 
         const posts = await Post.find()
             .limit(limit)
@@ -26,7 +26,7 @@ router.get('/posts', isLoggedin, async (req, res) => {
     }
 });
 
-router.post('/posts/new', isLoggedin, async(req, res) => {
+router.post('/post/new', isLoggedin, async(req, res) => {
     try {
         const { title, content } = req.body
         if (!title || !content) {

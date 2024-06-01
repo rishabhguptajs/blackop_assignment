@@ -9,6 +9,7 @@ const Signup = () => {
   const [profilePicture, setProfilePicture] = useState(null);
   const [terms, setTerms] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const validateEmail = (email) => {
@@ -16,7 +17,7 @@ const Signup = () => {
     return re.test(String(email).toLowerCase());
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     let validationErrors = {};
 
@@ -44,10 +45,45 @@ const Signup = () => {
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-    } else {
-      alert('Welcome! You have signed up successfully.');
-      navigate('/posts');
+      return;
     }
+
+    try {
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+      formData.append('name', name);
+      if (profilePicture) {
+        formData.append('profilePicture', profilePicture);
+      }
+
+      const response = await fetch('http://localhost:8080/api/auth/signup', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Something went wrong');
+      }
+
+      localStorage.setItem('user', JSON.stringify(data.data));
+      localStorage.setItem('token', data.token);
+
+      alert('Signup successful!');
+      navigate('/posts');
+    } catch (error) {
+      setErrors({ general: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    setProfilePicture(e.target.files[0]);
   };
 
   return (
@@ -119,7 +155,7 @@ const Signup = () => {
             <input
               type="file"
               id="profilePicture"
-              onChange={(e) => setProfilePicture(e.target.files[0])}
+              onChange={handleFileChange}
               className="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
@@ -137,12 +173,14 @@ const Signup = () => {
             {errors.terms && <p className="text-red-500 text-xs ml-2">{errors.terms}</p>}
           </div>
 
+          {errors.general && <p className="text-red-500 text-xs mt-1">{errors.general}</p>}
+
           <div className="pt-4">
             <button
               type="submit"
               className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              Submit
+              {loading ? 'Loading...' : 'Submit'}
             </button>
           </div>
         </form>
